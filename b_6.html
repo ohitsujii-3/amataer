@@ -56,6 +56,14 @@ button{font-family:inherit;cursor:pointer;border:none;}
 .fbar{height:6px;border-radius:3px;background:#334155;overflow:hidden;}
 .fbar>i{display:block;height:100%;border-radius:3px;opacity:.85;}
 textarea{width:100%;height:150px;border-radius:12px;background:#0f172a;border:1px solid var(--line);color:#e2e8f0;font-size:12px;padding:12px;font-family:ui-monospace,monospace;resize:vertical;}
+.q.miss{border-color:#fca5a5;background:#fff7f7;}
+.q.miss .qt::after{content:"未回答";display:inline-block;margin-left:8px;font-size:11px;font-weight:600;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:1px 6px;vertical-align:middle;}
+.warn{color:#dc2626;font-size:13px;font-weight:600;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:8px 12px;margin:10px 0 0;text-align:center;}
+.guide{font-size:13px;color:#a8a29e;text-align:center;margin-top:24px;}
+.pwscreen{text-align:center;}
+.pwscreen .pwbox{margin:0 auto;}
+.nav{margin-top:32px;}
+.nav .next{padding:15px;}
 .hide{display:none;}
 </style>
 </head>
@@ -72,14 +80,14 @@ const DOMAINS = {
 };
 const FACETS = {O1:"想像力",O2:"芸術への関心",O3:"感情の豊かさ",O4:"冒険心",O5:"知的好奇心",O6:"進歩性",C1:"自己効力感",C2:"秩序性",C3:"責任感",C4:"達成追求",C5:"自己規律",C6:"慎重さ",E1:"親しみやすさ",E2:"社交性",E3:"自己主張",E4:"活動性",E5:"刺激希求",E6:"明るさ",A1:"信頼",A2:"実直さ",A3:"利他性",A4:"協力",A5:"謙虚さ",A6:"共感性",N1:"不安",N2:"怒り",N3:"抑うつ",N4:"自意識",N5:"衝動性",N6:"傷つきやすさ"};
 const LIKERT=[[1,"全く"],[2,"あまり"],[3,"どちらとも"],[4,"やや"],[5,"とても"]];
-const PER=8, TOTAL=ITEMS.length, PAGES=Math.ceil(TOTAL/PER), KEY="big5_v2";
+const PER=15, TOTAL=ITEMS.length, PAGES=Math.ceil(TOTAL/PER), KEY="big5_v2";
 
 function order(n,seed){let s=seed>>>0;const r=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};const a=[...Array(n).keys()];for(let i=n-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 const DISP=order(TOTAL,20240703).map(i=>ITEMS[i]);
 
-let state={screen:"pw",answers:{},page:0,pw:"",err:"",done:false};
-try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);state.answers=o.answers||{};state.page=o.page||0;state.done=o.done||false;}}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({answers:state.answers,page:state.page,done:state.done}));}catch(e){}}
+let state={screen:"pw",answers:{},page:0,pw:"",err:"",done:false,check:false};
+try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);state.answers=o.answers||{};state.page=o.page||0;state.done=o.done||false;state.check=o.check||false;}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({answers:state.answers,page:state.page,done:state.done,check:state.check}));}catch(e){}}
 const answered=()=>Object.keys(state.answers).length;
 const app=document.getElementById("app");
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
@@ -109,7 +117,7 @@ function render(){
   renderQuiz();
 }
 function renderPw(){
-  app.innerHTML=`<div class="dark"><div class="wrap pad"><p class="ey">PROTECTED</p><h1>パスワードを入力</h1><p class="lead">このテストは限定公開です。</p><div class="pwbox"><input id="pw" type="password" inputmode="numeric" placeholder="****" value="${esc(state.pw)}"><div class="err">${state.err}</div><button class="btn" id="go">開く</button></div></div></div>`;
+  app.innerHTML=`<div class="dark"><div class="wrap pad pwscreen"><p class="ey">PROTECTED</p><h1>パスワードを入力</h1><p class="lead">このテストは限定公開です。</p><div class="pwbox"><input id="pw" type="password" inputmode="numeric" placeholder="****" value="${esc(state.pw)}"><div class="err">${state.err}</div><button class="btn" id="go">開く</button></div></div></div>`;
   const inp=document.getElementById("pw");
   const go=()=>{if(inp.value==="4321"){state.screen="intro";state.err="";render();}else{state.err="パスワードが違います。";state.pw="";render();document.getElementById("pw").focus();}};
   document.getElementById("go").onclick=go;
@@ -125,15 +133,35 @@ function renderIntro(){
   ${resume?`<p style="color:#a5b4fc;font-size:14px">この端末に、途中までの回答（${answered()}/${TOTAL}問）が残っています。</p>
   <button class="btn" id="start">続きから（${answered()}/${TOTAL}問）</button>`:`<button class="btn" id="start">はじめる</button>`}
   </div></div>`;
-  document.getElementById("start").onclick=()=>{if(!resume){state.answers={};state.page=0;state.done=false;save();}state.screen="quiz";render();window.scrollTo(0,0);};
+  document.getElementById("start").onclick=()=>{if(!resume){state.answers={};state.page=0;state.done=false;state.check=false;save();}state.screen="quiz";render();window.scrollTo(0,0);};
 }
-function doReset(){if(!confirm("回答を消去して最初からやり直しますか？"))return;state.answers={};state.page=0;save();state.screen="intro";render();}
+function doReset(){if(!confirm("回答を消去して最初からやり直しますか？"))return;state.answers={};state.page=0;state.check=false;save();state.screen="intro";render();}
+function missPages(){const s=new Set();DISP.forEach((it,i)=>{if(!state.answers[it.id])s.add(Math.floor(i/PER));});return [...s].sort((a,b)=>a-b);}
+function pageMiss(p){const st=p*PER;return DISP.slice(st,st+PER).some(it=>!state.answers[it.id]);}
+function fmtPages(a){const h=a.slice(0,3).map(p=>(p+1)+"P").join("・");return a.length>3?h+" 他"+(a.length-3)+"件":h;}
+function paintNav(){
+  const last=state.page===PAGES-1, mp=missPages(), hole=pageMiss(state.page);
+  document.getElementById("warnwrap").innerHTML=(state.check&&mp.length)?`<div class="warn">回答もれがあります。（${fmtPages(mp)}）</div>`:"";
+  let btn="";
+  if(state.check){
+    if(mp.length===0){btn=`<button class="next g" id="fin">結果を見る</button>`;}
+    else if(!hole){btn=`<button class="next g" id="jump">次の未回答へ</button>`;}
+  }else{
+    btn=last?`<button class="next g" id="fin">結果を見る</button>`:`<button class="next" id="next">次へ</button>`;
+  }
+  const back=state.check?"":`<button class="back" id="back">戻る</button>`;
+  document.getElementById("navwrap").innerHTML=btn?`<div class="nav">${back}${btn}</div>`:`<p class="guide">未回答の設問に回答すると、進むボタンが表示されます。</p>`;
+  const bk=document.getElementById("back");if(bk)bk.onclick=()=>{if(state.page===0){state.screen="intro";}else{state.page--;save();}render();window.scrollTo(0,0);};
+  const nx=document.getElementById("next");if(nx)nx.onclick=()=>{state.page++;save();render();window.scrollTo(0,0);};
+  const jp=document.getElementById("jump");if(jp)jp.onclick=()=>{const m=missPages();if(!m.length)return;const n=m.find(p=>p>state.page);state.page=(n!==undefined)?n:m[0];save();render();window.scrollTo(0,0);};
+  const fn=document.getElementById("fin");if(fn)fn.onclick=()=>{const m=missPages();if(m.length){state.check=true;state.page=m[0];save();render();window.scrollTo(0,0);return;}state.done=true;save();state.screen="results";render();window.scrollTo(0,0);};
+}
 function renderQuiz(){
   const start=state.page*PER, items=DISP.slice(start,start+PER), last=state.page===PAGES-1, pct=Math.round(answered()/TOTAL*100);
   let qs="";
   items.forEach((it,idx)=>{
     const cur=state.answers[it.id];
-    qs+=`<div class="q"><p class="qt"><span class="n">${start+idx+1}.</span>${esc(it.t)}</p><div class="opts">`;
+    qs+=`<div class="q${(state.check&&cur===undefined)?" miss":""}"><p class="qt"><span class="n">${start+idx+1}.</span>${esc(it.t)}</p><div class="opts">`;
     LIKERT.forEach(([v,s])=>{qs+=`<button class="opt${cur===v?" on":""}" data-id="${it.id}" data-v="${v}">${s}</button>`;});
     qs+=`</div></div>`;
   });
@@ -141,24 +169,19 @@ function renderQuiz(){
   <div class="sticky"><div class="wrap" style="padding-top:12px;padding-bottom:12px">
     <div class="meta"><span>ページ ${state.page+1} / ${PAGES}</span><span>${answered()} / ${TOTAL} 問（${pct}%）</span></div>
     <div class="bar"><i style="width:${pct}%"></i></div>
+    <div id="warnwrap"></div>
     <div class="remind">「過去、半年以内に感じたまま」で回答してください</div>
   </div></div>
   <div class="wrap" style="padding-top:16px;padding-bottom:32px">
     <div class="ends"><span>← あてはまらない</span><span>あてはまる →</span></div>
     ${qs}
-    <div class="nav">
-      <button class="back" id="back">戻る</button>
-      ${last?`<button class="next g" id="fin">結果を見る</button>`:`<button class="next" id="next">次へ</button>`}
-    </div>
+    <div id="navwrap"></div>
     
   </div></div>`;
   app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{state.answers[b.dataset.id]=+b.dataset.v;save();
     b.parentElement.querySelectorAll(".opt").forEach(x=>x.classList.remove("on"));b.classList.add("on");
-    const pct=Math.round(answered()/TOTAL*100);app.querySelector(".bar>i").style.width=pct+"%";app.querySelector(".meta span:last-child").textContent=answered()+" / "+TOTAL+" 問（"+pct+"%）";});
-  document.getElementById("back").onclick=()=>{if(state.page===0){state.screen="intro";}else{state.page--;save();}render();window.scrollTo(0,0);};
-  const nx=document.getElementById("next");if(nx)nx.onclick=()=>{state.page++;save();render();window.scrollTo(0,0);};
-  const fn=document.getElementById("fin");if(fn)fn.onclick=()=>{state.done=true;save();state.screen="results";render();window.scrollTo(0,0);};
-  const sk=document.getElementById("skip");if(sk)sk.onclick=()=>{state.screen="results";render();window.scrollTo(0,0);};
+    const pct=Math.round(answered()/TOTAL*100);app.querySelector(".bar>i").style.width=pct+"%";app.querySelector(".meta span:last-child").textContent=answered()+" / "+TOTAL+" 問（"+pct+"%）";if(state.check){const c=b.closest(".q");if(c)c.classList.remove("miss");paintNav();}});
+  paintNav();
 }
 function renderResults(){
   const {fs,ds}=scores();const lv=s=>s>=60?"高め":s<=40?"低め":"中程度";
